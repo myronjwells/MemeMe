@@ -23,6 +23,12 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
     @IBOutlet weak var topTextField: MemeMeTextField!
     @IBOutlet weak var bottomTextField: MemeMeTextField!
     @IBOutlet weak var shareButton: UIBarButtonItem!
+    @IBOutlet weak var cancelEditButton: UIBarButtonItem!
+    let appDelegate = UIApplication.shared.delegate as! AppDelegate
+    var isEditingMeme: Bool = false
+    var selectedMemeToEdit: Meme!
+    
+    
     
     
     override var prefersStatusBarHidden: Bool {
@@ -33,9 +39,10 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         super.viewDidLoad()
         
         //setup the ui initally
-        defaultUISetup()
+        memeUISetup(isEditingMeme)
         topTextField.delegate = self
         bottomTextField.delegate = self
+        
         
         
         
@@ -44,7 +51,6 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        
         cameraPicker.isEnabled = UIImagePickerController.isSourceTypeAvailable(.camera)
 
              subscribeToKeyboardNotifications()
@@ -95,12 +101,7 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
     
     
     @IBAction func cancelEdit(_ sender: Any) {
-        
-        //Revert the UI back to default
-        defaultUISetup()
-        
-        //Remove the chosen image
-        imageView.image = nil
+        performSegueToReturnBack()
     }
     
     
@@ -110,13 +111,24 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         let meme = Meme(topText: topTextField.text!, bottomText: bottomTextField.text!, originalImage: imageView.image!, memedImage: generateMemedImage())
         
         UIImageWriteToSavedPhotosAlbum(meme.memedImage, self, nil, nil)
+        appDelegate.memes.append(meme)
+        performSegue(withIdentifier: "sentMemesTabSegue", sender: nil)
+        
     }
     
-    func defaultUISetup() {
+    func memeUISetup(_ editMode:Bool) {
         
-        topTextField.text = "TOP"
-        bottomTextField.text = "BOTTOM"
-        shareButton.isEnabled = false
+        self.navigationItem.hidesBackButton = true
+        topTextField.text = editMode ? selectedMemeToEdit.topText : "TOP"
+        bottomTextField.text = editMode ? selectedMemeToEdit.bottomText : "BOTTOM"
+        shareButton.isEnabled = editMode
+        
+        appDelegate.memes.isEmpty ? (cancelEditButton.isEnabled = false) : (cancelEditButton.isEnabled = true)
+        
+        if(editMode) {
+            imageView.image = selectedMemeToEdit.originalImage
+        }
+        
     }
     
     func generateMemedImage() -> UIImage {
@@ -137,6 +149,14 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         }
         
         return memedImage
+    }
+    
+    func performSegueToReturnBack()  {
+        if let nav = self.navigationController {
+            nav.popViewController(animated: true)
+        } else {
+            self.dismiss(animated: true, completion: nil)
+        }
     }
     
     
@@ -215,6 +235,8 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         textField.resignFirstResponder()
         return true
     }
+    
+    
     
 
 
